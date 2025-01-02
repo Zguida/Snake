@@ -10,12 +10,21 @@ snake::snake(sf::Vector2f size)
 
 void snake::updateMovement(int x, int y)
 {
-	for (int i = snake_body.size()-1; i > 0; i--) {
-		snake_body[i].setPosition(snake_body[i - 1].getPosition());
-	}
+	sf::Vector2f pos2 = snake_body[0].getPosition();
+	pos2.x = pos2.x - 5;
+	pos2.y = pos2.y - 5;
 	if (!snake_body.empty())
 	{
-		snake_body[0].setPosition(sf::Vector2f(snake_body[0].getPosition().x + (x*5), snake_body[0].getPosition().y + (y*5)));
+		snake_body[0].setPosition(sf::Vector2f(snake_body[0].getPosition().x + (x * 5), snake_body[0].getPosition().y + (y * 5)));
+	}
+	for (int i = snake_body.size()-1; i > 0; i--) {
+		if (i == 1) {
+			snake_body[i].setPosition(pos2);
+		}
+		else 
+		{
+			snake_body[i].setPosition(snake_body[i - 1].getPosition());
+		}
 	}
 }
 
