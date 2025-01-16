@@ -1,35 +1,50 @@
-#include "snake.h"
+#include "Snake.h"
 
 snake::snake(sf::Vector2f size)
 {	
 	sf::RectangleShape square = sf::RectangleShape(size);
-	square.setFillColor(sf::Color::Green);
-	square.setPosition(sf::Vector2f(50, 50));
+	square.setFillColor(sf::Color::Red);
+	square.setOrigin(sf::Vector2f(size.x / 2, size.y / 2));
+	square.setPosition(sf::Vector2f(size.x, size.y));
 	snake_body.push_back(square);
 }
 
-void snake::updateMovement(int x, int y)
+bool snake::updateMovement(sf::Vector2f dir, float speed, float delta_time)
 {
-	sf::Vector2f pos2 = snake_body[0].getPosition();
-	pos2.x = pos2.x - 5;
-	pos2.y = pos2.y - 5;
+	static float accumulator = 0.0f;
+	float step = snake_body[0].getSize().x;
+	float interval = step / speed;
+
+	sf::Vector2f initial = snake_body[0].getPosition();
+	sf::Vector2f hold;
+	sf::Vector2f move = sf::Vector2f(step * dir.x, step * dir.y);
+
+	accumulator += delta_time;
+
 	if (!snake_body.empty())
 	{
-		snake_body[0].setPosition(sf::Vector2f(snake_body[0].getPosition().x + (x * 5), snake_body[0].getPosition().y + (y * 5)));
-	}
-	for (int i = snake_body.size()-1; i > 0; i--) {
-		if (i == 1) {
-			snake_body[i].setPosition(pos2);
-		}
-		else 
+		if (accumulator >= interval && dir.length() != 0)
 		{
-			snake_body[i].setPosition(snake_body[i - 1].getPosition());
+			accumulator -= interval;
+			snake_body[0].move(move);
+
+			for (int i = 1; i < snake_body.size(); i++)
+			{
+				hold = snake_body[i].getPosition();
+				snake_body[i].setPosition(initial);
+				initial = hold;
+			}
+			return true;
 		}
+
 	}
+	return false;
 }
 
 void snake::update_length() {
 	sf::RectangleShape new_rect = snake_body[snake_body.size()-1];
+	new_rect.setFillColor(sf::Color::Green);
+	new_rect.setFillColor(sf::Color(std::rand() % 256, std::rand() % 256, std::rand() % 256, 255));
 	snake_body.push_back(new_rect);
 }
 
@@ -42,7 +57,7 @@ int snake::size() {
 	return snake_body.size();
 }
 
-sf::RectangleShape snake::get_body_part(int body_part) {
+sf::RectangleShape& snake::get_body_part(int body_part) {
 	return snake_body[body_part];
 }
 

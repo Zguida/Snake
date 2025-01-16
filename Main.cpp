@@ -1,49 +1,91 @@
 #include <SFML/Graphics.hpp>
-#include "snake.h"
+#include "Snake.h"
+#include "Berries.h"
 #include <iostream>
 
 //bool for pausing game
-bool isFrozen = false;
+bool paused = false;
 
-sf::FloatRect endGame(sf::RenderWindow& window) {
+sf::FloatRect static endGame(sf::RenderWindow& window) {
     sf::Font font("resources/game_over.ttf");
-    sf::Text game_over = sf::Text(font, "GAME OVER", 100);
+    float fontscale = (float)window.getSize().x / window.getSize().x*1.4f;
+    sf::Text game_over = sf::Text(font, "GAME OVER", (int)(100/ fontscale));
     game_over.setPosition(sf::Vector2f(((window.getSize().x / 2) - game_over.getLocalBounds().size.x / 2), ((window.getSize().y / 3) - game_over.getLocalBounds().size.y / 2)));
-    sf::Text play_again = sf::Text(font, "Play Again?", 50);
-    int gox = game_over.getGlobalBounds().position.x;
-    int goy = game_over.getGlobalBounds().position.y;
-    play_again.setPosition(sf::Vector2f(gox + game_over.getGlobalBounds().size.x/4, goy + game_over.getGlobalBounds().size.y));
+    sf::Text play_again = sf::Text(font, "Play Again? (Spacebar)", (int)(50/ fontscale));
+    float gox = game_over.getGlobalBounds().position.x;
+    float goy = game_over.getGlobalBounds().position.y;
+    play_again.setPosition(sf::Vector2f(gox + ((game_over.getGlobalBounds().size.x - play_again.getLocalBounds().size.x)/2), goy + 20));
     window.draw(game_over);
     window.draw(play_again);
-    isFrozen = true;
+    paused = true;
     return play_again.getGlobalBounds();
 }
 
+void static addBerry(berries& berry, sf::RectangleShape& window, int edge_difference)
+{
+    int window_size = window.getSize().x;
+    int randx = std::rand();
+    int randy = std::rand();
+    int diff = edge_difference / 2;
+    int berry_size = berry.get_berry_size();
+    int bounds = diff + berry_size;
+    int xberry = bounds + (randx % (window_size - (bounds - 1)));
+    int yberry = bounds + (randy % (window_size - (bounds - 1)));
+    sf::Vector2f berry_location(xberry, yberry);
+    berry.new_berry(berry_location);
+    if (berry.check_last())
+    {
+        berry.remove_last();
+        addBerry(berry, window, edge_difference);
+    }
+}
+
+
+
 int main()
 {
-    // Declare and create a new window
-    sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "SFML window");
+    //variables
+    float snake_size = 30;
+    float snake_speed = snake_size * 10;
+    sf::RenderWindow window(sf::VideoMode(sf::Vector2u((int)(snake_size * 20u), (int)(snake_size * 20u)),32), "Snake");
+    sf::Vector2u window_size = window.getSize();
 
-    // Limit the framerate to 60 frames per second (this step is optional)
-    window.setFramerateLimit(60);
+    //inits
+    sf::Vector2f size_vector = sf::Vector2f(snake_size, snake_size);
+    snake the_snake = snake(size_vector);
+    sf::Clock clock;
+    berries berry = berries("resources/Bush_blue_flowers3.png", size_vector); //generates the berry texture
+    
 
-    // The main loop - ends as soon as the window is closed
-    snake the_snake = snake(sf::Vector2f(10, 10));
+    int key_buffer = 0; //used to isolate button presses
 
-    //used to isolate button presses
-    bool key_buffer = NULL;
+    sf::Vector2f current_direction; //direction the snake is facing
 
-    //direction the snake is facing
-    sf::Vector2f current_direction;
-    //used for game over screen to reset game
-    sf::FloatRect play_button;
-    //used to offset collision detection when a new peice is added at the back of the snake
-    bool length_updated = false;
+    sf::FloatRect play_button; //used for game over screen to reset game
+    
+    sf::RectangleShape bounding_box(sf::Vector2f(snake_size * 19, snake_size * 19));
+    bounding_box.setOutlineColor(sf::Color::Red);
+    bounding_box.setOutlineThickness(2);
+    bounding_box.setPosition(sf::Vector2f(size_vector.x/2, size_vector.y/2));
+    bounding_box.setFillColor(sf::Color::Transparent);
+    
+    while (berry.number_of_berries() < 10)
+    {
+        addBerry(berry, bounding_box, window.getSize().x - bounding_box.getSize().x);
+    }
 
+    bool moved = false;
+    
     while (window.isOpen())
     {
-        while (!isFrozen)
+
+        while (!paused)
         {
+            window.draw(bounding_box);
+            //delta time for movement
+            sf::Time elapsed = clock.restart();
+            float delta = elapsed.asSeconds();
+
             // Event processing
             while (const std::optional event = window.pollEvent())
             {
@@ -53,57 +95,74 @@ int main()
                 if (event->is<sf::Event::KeyReleased>())
                     key_buffer = false;
             }
-            //accepts keybaord input and updates movement direction
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) && key_buffer == false && current_direction.y != 1) {
-                the_snake.updateMovement(0, -1);
-                current_direction = sf::Vector2f(0, -1);
-                key_buffer = true;
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) && key_buffer == false && current_direction.x != 1) {
-                the_snake.updateMovement(-1, 0);
-                current_direction = sf::Vector2f(-1, 0);
-                key_buffer = true;
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) && key_buffer == false && current_direction.x != -1) {
-                the_snake.updateMovement(1, 0);
-                current_direction = sf::Vector2f(1, 0);
-                key_buffer = true;
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) && key_buffer == false && current_direction.y != -1) {
-                the_snake.updateMovement(0, 1);
-                current_direction = sf::Vector2f(0, 1);
-                key_buffer = true;
-            }
-            //remove in final build
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) && current_direction.lengthSquared() != 0) {
+
+            //TODO: replace with bery collection logic 
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+            {
                 the_snake.update_length();
-                length_updated = true;
             }
-            //continues movement in current direction
-            the_snake.updateMovement(current_direction.x, current_direction.y);
+
+            //accepts keybaord input and updates movement direction
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) && key_buffer == false && current_direction.y != 1 && the_snake.get_body_part(0).getPosition() != size_vector)
+            {
+                //the_snake.collapse();
+                current_direction = (sf::Vector2f(0, -1));
+                moved = the_snake.updateMovement(current_direction, snake_speed, delta);
+                key_buffer = true;
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) && key_buffer == false && current_direction.y != -1)
+            {
+                //the_snake.collapse();
+                current_direction = (sf::Vector2f(0, 1));
+                moved = the_snake.updateMovement(current_direction, snake_speed, delta);
+                key_buffer = true;
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) && key_buffer == false && current_direction.x != 1 && the_snake.get_body_part(0).getPosition() != size_vector)
+            {
+                //the_snake.collapse();
+                current_direction = (sf::Vector2f(-1, 0));
+                moved = the_snake.updateMovement(current_direction, snake_speed, delta);
+                key_buffer = true;
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) && key_buffer == false && current_direction.x != -1)
+            {
+                //the_snake.collapse();
+                current_direction = (sf::Vector2f(1, 0));
+                moved = the_snake.updateMovement(current_direction, snake_speed, delta);
+                key_buffer = true;
+            }
+            else if (current_direction.length() != 0)
+            {
+                moved = the_snake.updateMovement(current_direction, snake_speed, delta); //continues movement in current direction
+            }
 
             //checks if the snake has gone out of bounds
-            int headx = the_snake.get_location(0).x;
-            int heady = the_snake.get_location(0).y;
-            if (headx > window.getSize().x - 10 || heady > window.getSize().y - 10 || heady < 0 || headx < 0) {
+            float headx = the_snake.get_location(0).x;
+            float heady = the_snake.get_location(0).y;
+            if (headx > window.getSize().x - snake_size / 2 || heady > window.getSize().y - snake_size/2 || heady < snake_size/2 || headx < snake_size/2)
+            {
                 play_button = endGame(window);
             }
-            //draws snake on screen
-            window.draw(the_snake);
+         
+            
             //checks collisons with body parts
-            for (int i = 1; i < the_snake.size() - 1; i++)
-            {
-                std::optional<sf::Rect<float>> intersect = the_snake.get_body_part(0).getGlobalBounds().findIntersection(the_snake.get_body_part(i).getGlobalBounds());
-                if (intersect.has_value())
+            if (moved) {
+                sf::Vector2f head_position = the_snake.get_body_part(0).getPosition();
+                for (int i = 2; i < the_snake.size() - 1; i++)
                 {
-                    play_button = endGame(window);
+                    sf::Vector2f body_position = the_snake.get_body_part(i).getPosition();
+                    float relative_position = snake_size*.8f;
+                    if (((head_position.x < body_position.x + relative_position && head_position.x > body_position.x - relative_position) && (head_position.y < body_position.y + relative_position && head_position.y > body_position.y - relative_position)))
+                    {
+                        play_button = endGame(window);
+                    }
                 }
             }
-
             // End the current frame and display its contents on screen
             window.display();
             window.clear();
-            length_updated = false;
+            window.draw(the_snake); //draws snake on screen
+            window.draw(berry);
         }
         // Event processing for after game over
         while (const std::optional event = window.pollEvent())
@@ -111,13 +170,16 @@ int main()
             // Request for closing the window
             if (event->is<sf::Event::Closed>())
                 window.close();
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) 
+            {
                 sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
-                if (play_button.contains(sf::Vector2f(mouse_pos.x, mouse_pos.y))) {
-                    isFrozen = false;
+                if (play_button.contains(sf::Vector2f((float)mouse_pos.x, (float)mouse_pos.y)) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
+                {
+                    paused = false;
                     window.clear();
-                    the_snake = snake(sf::Vector2f(10, 10));
+                    the_snake = snake(sf::Vector2f(snake_size, snake_size));
                     current_direction = sf::Vector2f(0, 0);
+                    moved = false;
                 }
             }
         }

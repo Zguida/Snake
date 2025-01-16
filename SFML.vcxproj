@@ -144,17 +144,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
-    <ClInclude Include="snake.h" />
+    <ClInclude Include="Snake.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Berries.cpp" />
+    <ClCompile Include="Berries.h" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="snake.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\..\..\Pictures\test.jpg">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-    </Image>
+    <ClCompile Include="Snake.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="..\..\..\Downloads\nice_music.ogg">
@@ -165,6 +161,9 @@
   </ItemGroup>
   <ItemGroup>
     <Font Include="resources\game_over.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resources\Bush_blue_flowers3.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
