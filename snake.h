@@ -6,7 +6,7 @@
 class snake : public sf::Drawable
 {
 public:
-	snake(sf::Vector2f initial_location);
+	snake(sf::Vector2u initial_location);
 	bool updateMovement(sf::Vector2f loc, float speed, float delta); //update movement on the x y plane
 	sf::Vector2f get_location(int body_part);
 	void update_length();

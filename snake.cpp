@@ -1,15 +1,15 @@
 #include "Snake.h"
 
-snake::snake(sf::Vector2f size)
+snake::snake(sf::Vector2u size)
 {	
-	sf::RectangleShape square = sf::RectangleShape(size);
+	sf::RectangleShape square = sf::RectangleShape(sf::Vector2f(size));
 	square.setFillColor(sf::Color::Red);
 	square.setOrigin(sf::Vector2f(size.x / 2, size.y / 2));
 	square.setPosition(sf::Vector2f(size.x, size.y));
 	snake_body.push_back(square);
 }
 
-bool snake::updateMovement(sf::Vector2f dir, float speed, float delta_time)
+bool snake::updateMovement(sf::Vector2f dir, float speed, float delta)
 {
 	static float accumulator = 0.0f;
 	float step = snake_body[0].getSize().x;
@@ -19,13 +19,13 @@ bool snake::updateMovement(sf::Vector2f dir, float speed, float delta_time)
 	sf::Vector2f hold;
 	sf::Vector2f move = sf::Vector2f(step * dir.x, step * dir.y);
 
-	accumulator += delta_time;
+	accumulator += delta;
 
 	if (!snake_body.empty())
 	{
 		if (accumulator >= interval && dir.length() != 0)
 		{
-			accumulator -= interval;
+			accumulator = 0;
 			snake_body[0].move(move);
 
 			for (int i = 1; i < snake_body.size(); i++)

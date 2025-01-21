@@ -8,7 +8,7 @@ bool paused = false;
 
 sf::FloatRect static endGame(sf::RenderWindow& window) {
     sf::Font font("resources/game_over.ttf");
-    float fontscale = (float)window.getSize().x / window.getSize().x*1.4f;
+    float fontscale = (float)window.getSize().x / window.getSize().x*1.2f;
     sf::Text game_over = sf::Text(font, "GAME OVER", (int)(100/ fontscale));
     game_over.setPosition(sf::Vector2f(((window.getSize().x / 2) - game_over.getLocalBounds().size.x / 2), ((window.getSize().y / 3) - game_over.getLocalBounds().size.y / 2)));
     sf::Text play_again = sf::Text(font, "Play Again? (Spacebar)", (int)(50/ fontscale));
@@ -18,43 +18,27 @@ sf::FloatRect static endGame(sf::RenderWindow& window) {
     window.draw(game_over);
     window.draw(play_again);
     paused = true;
+    window.display();
+    window.clear();
     return play_again.getGlobalBounds();
 }
-
-void static addBerry(berries& berry, sf::RectangleShape& window, int edge_difference)
-{
-    int window_size = window.getSize().x;
-    int randx = std::rand();
-    int randy = std::rand();
-    int diff = edge_difference / 2;
-    int berry_size = berry.get_berry_size();
-    int bounds = diff + berry_size;
-    int xberry = bounds + (randx % (window_size - (bounds - 1)));
-    int yberry = bounds + (randy % (window_size - (bounds - 1)));
-    sf::Vector2f berry_location(xberry, yberry);
-    berry.new_berry(berry_location);
-    if (berry.check_last())
-    {
-        berry.remove_last();
-        addBerry(berry, window, edge_difference);
-    }
-}
-
-
 
 int main()
 {
     //variables
-    float snake_size = 30;
-    float snake_speed = snake_size * 10;
+    int snake_size = 40;
+    float snake_speed = snake_size * 8;
     sf::RenderWindow window(sf::VideoMode(sf::Vector2u((int)(snake_size * 20u), (int)(snake_size * 20u)),32), "Snake");
     sf::Vector2u window_size = window.getSize();
 
     //inits
-    sf::Vector2f size_vector = sf::Vector2f(snake_size, snake_size);
-    snake the_snake = snake(size_vector);
+    sf::Vector2u size_vector(snake_size, snake_size);
+    sf::Vector2f size_vector_float(size_vector);
+    snake the_snake(size_vector);
+    float relative_position = snake_size * .8f;
+    int to_remove = -1;
     sf::Clock clock;
-    berries berry = berries("resources/Bush_blue_flowers3.png", size_vector); //generates the berry texture
+    berries berry("resources/Bush_blue_flowers3.png", size_vector); //generates the berry texture
     
 
     int key_buffer = 0; //used to isolate button presses
@@ -68,11 +52,7 @@ int main()
     bounding_box.setOutlineThickness(2);
     bounding_box.setPosition(sf::Vector2f(size_vector.x/2, size_vector.y/2));
     bounding_box.setFillColor(sf::Color::Transparent);
-    
-    while (berry.number_of_berries() < 10)
-    {
-        addBerry(berry, bounding_box, window.getSize().x - bounding_box.getSize().x);
-    }
+    float edge_width = (window.getSize().x - bounding_box.getSize().x) / 2;
 
     bool moved = false;
     
@@ -81,7 +61,6 @@ int main()
 
         while (!paused)
         {
-            window.draw(bounding_box);
             //delta time for movement
             sf::Time elapsed = clock.restart();
             float delta = elapsed.asSeconds();
@@ -96,14 +75,8 @@ int main()
                     key_buffer = false;
             }
 
-            //TODO: replace with bery collection logic 
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-            {
-                the_snake.update_length();
-            }
-
             //accepts keybaord input and updates movement direction
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) && key_buffer == false && current_direction.y != 1 && the_snake.get_body_part(0).getPosition() != size_vector)
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) && key_buffer == false && current_direction.y != 1 && the_snake.get_body_part(0).getPosition() != size_vector_float)
             {
                 //the_snake.collapse();
                 current_direction = (sf::Vector2f(0, -1));
@@ -117,7 +90,7 @@ int main()
                 moved = the_snake.updateMovement(current_direction, snake_speed, delta);
                 key_buffer = true;
             }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) && key_buffer == false && current_direction.x != 1 && the_snake.get_body_part(0).getPosition() != size_vector)
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left) && key_buffer == false && current_direction.x != 1 && the_snake.get_body_part(0).getPosition() != size_vector_float)
             {
                 //the_snake.collapse();
                 current_direction = (sf::Vector2f(-1, 0));
@@ -139,30 +112,79 @@ int main()
             //checks if the snake has gone out of bounds
             float headx = the_snake.get_location(0).x;
             float heady = the_snake.get_location(0).y;
-            if (headx > window.getSize().x - snake_size / 2 || heady > window.getSize().y - snake_size/2 || heady < snake_size/2 || headx < snake_size/2)
+            if (headx > bounding_box.getSize().x + edge_width || heady > bounding_box.getSize().y + edge_width || heady < (snake_size / 2) + edge_width || headx < (snake_size / 2) + edge_width)
             {
+
                 play_button = endGame(window);
+          
+                break;
+            }
+            else
+            {
+                window.clear();
             }
          
-            
             //checks collisons with body parts
             if (moved) {
                 sf::Vector2f head_position = the_snake.get_body_part(0).getPosition();
-                for (int i = 2; i < the_snake.size() - 1; i++)
+                int snake_length = the_snake.size();
+                for (int i = 2; i < snake_length - 1; i++)
                 {
                     sf::Vector2f body_position = the_snake.get_body_part(i).getPosition();
-                    float relative_position = snake_size*.8f;
                     if (((head_position.x < body_position.x + relative_position && head_position.x > body_position.x - relative_position) && (head_position.y < body_position.y + relative_position && head_position.y > body_position.y - relative_position)))
                     {
                         play_button = endGame(window);
                     }
                 }
             }
+
+            if (moved) {
+                int a = berry.number_of_berries();
+                for (int i = 0; i < a; i++)
+                {
+                    std::pair current_berry = berry.get_sprite(i);
+                    sf::Vector2f berry_position = current_berry.first.getPosition();
+                    if (current_berry.first.getGlobalBounds().findIntersection(the_snake.get_body_part(0).getGlobalBounds()) && moved == true)
+                    {
+                        to_remove = current_berry.second;
+                        the_snake.update_length();
+                        moved = false;
+                    }
+                }
+            }
+            if (to_remove != -1)
+            {
+                berry.removeBerry(to_remove);
+                to_remove = -1;
+            }
+
+            //add a berry every 15 seconds
+            //TODO: remove hardcoded timer
+            if (berry.number_of_berries() <= 10)
+            {
+                static float accumulator = 0;
+                accumulator += delta;
+                int threshold = 1.7;
+                    if (accumulator > threshold)
+                    {
+                        berry.addBerry(berry, bounding_box, edge_width, delta, snake_size, the_snake);
+                        accumulator = 0;
+                    }
+            }
+
+            static float fps_counter = 0;
+            fps_counter += delta;
+            if (delta > 1)
+            {
+                fps_counter = 0;
+                
+            }
+
             // End the current frame and display its contents on screen
-            window.display();
-            window.clear();
-            window.draw(the_snake); //draws snake on screen
             window.draw(berry);
+            window.draw(the_snake);//draws snake on screen
+            window.draw(bounding_box);
+            window.display();
         }
         // Event processing for after game over
         while (const std::optional event = window.pollEvent())
@@ -177,9 +199,11 @@ int main()
                 {
                     paused = false;
                     window.clear();
-                    the_snake = snake(sf::Vector2f(snake_size, snake_size));
+                    the_snake = snake(size_vector);
                     current_direction = sf::Vector2f(0, 0);
                     moved = false;
+                    berry.clearBerries();
+                    clock.reset();
                 }
             }
         }
